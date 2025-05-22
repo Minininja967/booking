@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  horse-booking-app:
+    build: .
+    container_name: horse-booking-container
+    ports:
+      - "3000:3000"
+    volumes:
+      # Монтируем том для сохранения базы данных
+      - ./data:/app/data
+      # Если хотите редактировать статические файлы без пересборки образа
+      - ./public:/app/public
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped

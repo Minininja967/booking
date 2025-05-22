@@ -1,19 +1,22 @@
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
+const path = require('path');
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = 'your_super_secret_key'; // в .env в проде
+const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_key'; // лучше использовать переменную окружения
 const SALT_ROUNDS = 10;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public')); // Добавлено для статических файлов
+app.use(express.static('public')); // Статические файлы
 
-const db = new sqlite3.Database('./bookings.db');
+// Путь к базе данных (в контейнере будет в /app/data)
+const dbPath = process.env.NODE_ENV === 'production' ? './data/bookings.db' : './bookings.db';
+const db = new sqlite3.Database(dbPath);
 
 // Создание таблицы
 db.run(`
@@ -142,10 +145,6 @@ app.get('/my-bookings', authenticateToken, (req, res) => {
   });
 });
 
-app.listen(port, () => {
-  console.log(`🚀 Server running at http://localhost:${port}`);
-});
-
 // Отмена бронирования
 app.delete('/cancel-booking/:id', authenticateToken, (req, res) => {
   const bookingId = req.params.id;
@@ -157,5 +156,22 @@ app.delete('/cancel-booking/:id', authenticateToken, (req, res) => {
       return res.status(404).json({ error: 'Бронирование не найдено или нет доступа' });
     }
     res.json({ success: true });
+  });
+});
+
+app.listen(port, '0.0.0.0', () => {
+  console.log(`🚀 Server running at http://localhost:${port}`);
+});
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+  console.log('Shutting down gracefully...');
+  db.close((err) => {
+    if (err) {
+      console.error('Error closing database:', err.message);
+    } else {
+      console.log('Database connection closed.');
+    }
+    process.exit(0);
   });
 });

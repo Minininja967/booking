@@ -1,4 +1,27 @@
+# node_modules — никогда не коммитим
 node_modules/
-*.log
-.env
+
+# зависимости, генерируемые системой
+package-lock.json
+
+# системные файлы Windows / macOS
 .DS_Store
+Thumbs.db
+
+# временные логи, сессии, временные сборки
+*.log
+*.tmp
+
+# .env-файл с паролями, токенами
+.env
+
+# VSCode config
+.vscode/
+
+# Allure reports (если используешь)
+allure-report/
+allure-results/
+
+# кэш от Flatpickr, browsersync, Jest и пр.
+.cache/
+coverage/
