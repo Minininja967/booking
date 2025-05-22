@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Личный кабинет – Бронирование</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #f7f7f7; }
+    header { background: #4A3F35; color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { margin: 0; }
+    button { padding: 0.5rem 1rem; background: #4A3F35; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    section { margin: 2rem auto; padding: 2rem; background: white; max-width: 600px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    form { display: flex; flex-direction: column; gap: 1rem; }
+    input, select { padding: 0.5rem; font-size: 1rem; border-radius: 4px; border: 1px solid #ccc; }
+    #price-display { font-weight: bold; }
+
+    #popup {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    #popup.visible {
+      display: flex;
+    }
+    .popup-content {
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      text-align: center;
+    }
+    
+    #user-info {
+      margin-bottom: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #eee;
+    }
+    
+    #user-bookings {
+      margin-top: 2rem;
+    }
+    
+    .booking-item {
+      padding: 1rem;
+      border: 1px solid #eee;
+      border-radius: 4px;
+      margin-bottom: 1rem;
+    }
+
+    .booking-item button {
+      margin-top: 0.5rem;
+      background: #aa3333;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Личный кабинет</h1>
+    <div>
+      <span id="user-email"></span>
+      <button id="logout-btn" type="button">Выйти</button>
+    </div>
+  </header>
+
+  <section id="user-info">
+    <h2>Добро пожаловать!</h2>
+    <p>Вы авторизованы как <span id="user-email-info"></span></p>
+  </section>
+
+  <section>
+    <h2>Бронирование лошади</h2>
+    <form id="booking-form" autocomplete="off">
+      <input type="text" placeholder="Имя" name="firstName" required />
+      <input type="text" placeholder="Фамилия" name="lastName" required />
+      <input type="tel" placeholder="Телефон" name="phone" required />
+      <input type="email" placeholder="Email" name="email" id="booking-email" required />
+
+      <label for="horse-select">Выберите лошадь:</label>
+      <select id="horse-select" required>
+        <option value="">-- Выберите лошадь --</option>
+        <option value="1">Буцефал</option>
+        <option value="2" disabled style="color:gray;">Гром (недоступна)</option>
+        <option value="3">Молния</option>
+      </select>
+
+      <label for="date">Выберите дату:</label>
+      <input type="text" id="date" required />
+
+      <p id="price-display">Стоимость: <span>0</span> ₽</p>
+      <button id="submit-booking" type="submit" disabled>Забронировать</button>
+    </form>
+  </section>
+  
+  <section id="user-bookings">
+    <h2>Ваши бронирования</h2>
+    <div id="bookings-list" class="loading">
+      Загрузка бронирований...
+    </div>
+  </section>
+
+  <div id="popup">
+    <div class="popup-content">
+      <p id="popup-message"></p>
+      <button id="popup-ok-button">Ок</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script>
+    const checkAuth = () => {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        window.location.href = 'index.html';
+        return null;
+      }
+      return token;
+    };
+
+    const token = checkAuth();
+
+    const authFetch = async (url, options = {}) => {
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      };
+      
+      const response = await fetch(url, {
+        ...options,
+        headers
+      });
+      
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem('authToken');
+        window.location.href = 'index.html';
+        return null;
+      }
+      
+      return response;
+    };
+    
+    const loadUserInfo = async () => {
+      try {
+        const response = await authFetch('http://localhost:3000/me');
+        const data = await response.json();
+        
+        document.getElementById('user-email').textContent = data.email;
+        document.getElementById('user-email-info').textContent = data.email;
+        document.getElementById('booking-email').value = data.email;
+        
+        return data;
+      } catch (error) {
+        console.error('Ошибка загрузки информации пользователя:', error);
+        return null;
+      }
+    };
+
+    const loadUserBookings = async () => {
+      const bookingsList = document.getElementById('bookings-list');
+
+      try {
+        const response = await authFetch('http://localhost:3000/my-bookings');
+        const data = await response.json();
+
+        if (data.bookings && data.bookings.length > 0) {
+          bookingsList.innerHTML = '';
+
+          data.bookings.forEach(booking => {
+            const bookingItem = document.createElement('div');
+            bookingItem.className = 'booking-item';
+            bookingItem.innerHTML = `
+              <strong>Лошадь:</strong> ${booking.horse_name}<br>
+              <strong>Дата:</strong> ${booking.date}<br>
+              <strong>Имя:</strong> ${booking.first_name} ${booking.last_name}<br>
+              <strong>Контакты:</strong> ${booking.phone}, ${booking.email}<br>
+              <button class="cancel-booking" data-id="${booking.id}">Отменить</button>
+            `;
+
+            bookingItem.querySelector('.cancel-booking').addEventListener('click', async () => {
+              if (!confirm('Вы уверены, что хотите отменить бронирование?')) return;
+
+              try {
+                const res = await authFetch(`http://localhost:3000/cancel-booking/${booking.id}`, { method: 'DELETE' });
+                const result = await res.json();
+
+                if (res.ok) {
+                  alert('Бронирование отменено');
+                  loadUserBookings();
+                } else {
+                  alert(result.error || 'Не удалось отменить бронирование');
+                }
+              } catch (err) {
+                console.error(err);
+                alert('Ошибка при отмене бронирования');
+              }
+            });
+
+            bookingsList.appendChild(bookingItem);
+          });
+        } else {
+          bookingsList.innerHTML = '<p>У вас пока нет бронирований</p>';
+        }
+      } catch (error) {
+        console.error('Ошибка загрузки бронирований:', error);
+        bookingsList.innerHTML = '<p>Не удалось загрузить бронирования</p>';
+      }
+    };
+
+    const horseSelect = document.getElementById('horse-select');
+    const dateInput = document.getElementById('date');
+    const priceDisplay = document.querySelector('#price-display span');
+    const submitBtn = document.getElementById('submit-booking');
+    const form = document.getElementById('booking-form');
+    const popup = document.getElementById('popup');
+    const popupMessage = document.getElementById('popup-message');
+    const popupOkButton = document.getElementById('popup-ok-button');
+    let flatpickrInstance;
+
+    function updatePrice() {
+      const date = dateInput.value;
+      const horse = horseSelect.value;
+      if (date && horse) {
+        const basePrice = 1500;
+        const d = new Date(date);
+        const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+        const price = isWeekend ? basePrice * 1.2 : basePrice;
+        priceDisplay.textContent = price.toFixed(0);
+        submitBtn.disabled = false;
+      } else {
+        priceDisplay.textContent = 0;
+        submitBtn.disabled = true;
+      }
+    }
+
+    async function fetchAndDisableBookedDates(horseId) {
+      try {
+        const res = await fetch(`http://localhost:3000/booked-dates/${horseId}`);
+        const data = await res.json();
+
+        if (flatpickrInstance) flatpickrInstance.destroy();
+
+        flatpickrInstance = flatpickr(dateInput, {
+          dateFormat: "Y-m-d",
+          disable: data.bookedDates,
+          onChange: updatePrice,
+          minDate: "today"
+        });
+      } catch (error) {
+        console.error('Ошибка загрузки занятых дат:', error);
+        alert('Не удалось загрузить информацию о доступных датах');
+      }
+    }
+
+    horseSelect.addEventListener("change", async () => {
+      const horseId = horseSelect.value;
+      if (horseId) {
+        await fetchAndDisableBookedDates(horseId);
+        updatePrice();
+      }
+    });
+
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+
+      const body = {
+        horse_id: horseSelect.value,
+        horse_name: horseSelect.options[horseSelect.selectedIndex].text,
+        date: dateInput.value,
+        first_name: form.firstName.value,
+        last_name: form.lastName.value,
+        phone: form.phone.value,
+        email: form.email.value
+      };
+
+      try {
+        const res = await authFetch('http://localhost:3000/book', {
+          method: 'POST',
+          body: JSON.stringify(body)
+        });
+
+        const result = await res.json();
+
+        if (res.ok) {
+          popupMessage.innerHTML = `Лошадь <strong>${body.horse_name}</strong> успешно забронирована.<br>Стоимость: <strong>${priceDisplay.textContent} ₽</strong><br>С вами свяжутся по указанным контактам.`;
+          popup.classList.add('visible');
+          loadUserBookings();
+        } else {
+          alert(result.error || "Ошибка бронирования");
+        }
+      } catch (err) {
+        alert("Ошибка подключения к серверу");
+        console.error(err);
+      }
+    });
+
+    popupOkButton.addEventListener('click', () => {
+      popup.classList.remove('visible');
+      form.reset();
+      dateInput.value = '';
+      updatePrice();
+    });
+
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      localStorage.removeItem('authToken');
+      window.location.href = 'index.html';
+    });
+
+    const selectedHorseName = localStorage.getItem('selectedHorseName');
+    if (selectedHorseName) {
+      for (let opt of horseSelect.options) {
+        if (opt.textContent.includes(selectedHorseName) && !opt.disabled) {
+          horseSelect.value = opt.value;
+          horseSelect.dispatchEvent(new Event('change'));
+          break;
+        }
+      }
+      localStorage.removeItem('selectedHorseName');
+    }
+
+    (async () => {
+      await loadUserInfo();
+      await loadUserBookings();
+    })();
+  </script>
+</body>
+</html>

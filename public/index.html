@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Бронирование лошадей</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f7f7f7;
+      overflow: hidden; /* чтобы не было скролла страницы */
+      display: flex;
+      flex-direction: column;
+      height: 100vh; /* высота окна */
+    }
+
+    header {
+      background: #4A3F35;
+      color: white;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0; /* фиксированная высота */
+    }
+
+    header h1 {
+      margin: 0;
+    }
+
+    button {
+      padding: 0.5rem 1rem;
+      background: #4A3F35;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    main {
+      flex: 1 1 auto; /* растягиваем main на всё оставшееся пространство */
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Карусель */
+    .carousel-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      margin: 2rem;
+      flex-shrink: 0; /* фиксирован по высоте */
+    }
+
+    .carousel-container {
+      display: flex;
+      gap: 1rem;
+      overflow: hidden;
+      width: 880px;
+      scroll-behavior: smooth;
+    }
+
+    .carousel-btn {
+      background-color: #4A3F35;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: background 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .carousel-btn:hover {
+      background-color: #3a312a;
+    }
+
+    .slide {
+      flex: 0 0 200px;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .slide img {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 8px;
+      display: block;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Карточка */
+    #horse-profile {
+      display: flex;
+      flex-direction: row;
+      margin: 0 2rem 2rem 2rem;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      flex: 1 1 auto; /* растягиваем карточку на всё оставшееся пространство */
+      overflow: hidden;
+      max-height: none;
+      height: auto;
+    }
+
+    .profile-image,
+    .profile-info {
+      width: 50%;
+      box-sizing: border-box;
+    }
+
+    .profile-image {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .profile-image img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      border-radius: 8px;
+    }
+
+    .profile-info {
+      display: flex;
+      flex-direction: column;
+      padding: 1rem;
+    }
+
+    .profile-info h2 {
+      margin-top: 0;
+    }
+
+    .description-scroll {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      margin-top: 0.5rem;
+      padding-right: 0.5rem;
+    }
+
+    .book-button-wrapper {
+      display: flex;
+      justify-content: center;
+      margin-top: 1rem;
+      flex-shrink: 0;
+    }
+
+    .book-button-wrapper button {
+      padding: 0.5rem 1.5rem;
+    }
+
+    .box {
+      margin: 0 2rem 2rem 2rem;
+      background: white;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      flex-shrink: 0; /* фиксированный блок */
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .close-button {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #eee;
+      color: #333;
+      border: none;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+      transition: background 0.3s;
+    }
+
+  .close-button:hover {
+    background: #ccc;
+  }
+
+    @media (max-width: 768px) {
+      #horse-profile {
+        flex-direction: column;
+        height: auto;
+        max-height: none;
+      }
+
+      .profile-image,
+      .profile-info {
+        width: 100%;
+      }
+
+      .profile-image img {
+        max-height: 300px;
+      }
+
+      .description-scroll {
+        max-height: 200px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Конный Клуб "Гармония"</h1>
+    <a href="account.html"><button>Личный кабинет</button></a>
+  </header>
+
+  <main>
+    <!-- Карусель -->
+    <section class="carousel">
+      <div class="carousel-wrapper">
+        <button class="carousel-btn" id="carousel-prev">&#10094;</button>
+        <div class="carousel-container" id="carousel">
+          <div class="slide" data-name="Буцефал" data-img="horses/horse1.jpg">
+            <img src="horses/horse1.jpg" alt="Буцефал" />
+            <p>Буцефал</p>
+          </div>
+          <div class="slide" data-name="Гром" data-img="horses/horse2.jpg">
+            <img src="horses/horse2.jpg" alt="Гром" />
+            <p>Гром</p>
+          </div>
+          <div class="slide" data-name="Игорь" data-img="horses/horse3.jpg">
+            <img src="horses/horse3.jpg" alt="Игорь" />
+            <p>Игорь</p>
+          </div>
+          <div class="slide" data-name="Наташа" data-img="horses/horse4.jpg">
+            <img src="horses/horse4.jpg" alt="Наташа" />
+            <p>Наташа</p>
+          </div>
+          <div class="slide" data-name="Сервелат" data-img="horses/horse5.jpg">
+            <img src="horses/horse5.jpg" alt="Сервелат" />
+            <p>Сервелат</p>
+          </div>
+        </div>
+        <button class="carousel-btn" id="carousel-next">&#10095;</button>
+      </div>
+    </section>
+
+    <!-- Карточка -->
+    <section id="horse-profile" class="hidden">
+      <div class="profile-image">
+        <img id="horse-image" src="" alt="Фото лошади" />
+      </div>
+      <div class="profile-info">
+        <h2 id="horse-name"></h2>
+        <div class="description-scroll">
+          <p id="horse-description"></p>
+        </div>
+        <div class="book-button-wrapper">
+          <button id="book-from-profile">Забронировать</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- О клубе -->
+    <section class="box">
+      <h2>О клубе</h2>
+      <p>
+        Добро пожаловать в Конный Клуб «Гармония» — место, где сочетаются природа,
+        профессионализм и забота о лошадях. У нас вы найдёте дружелюбную атмосферу,
+        благородных скакунов и возможность отдохнуть душой.
+      </p>
+    </section>
+  </main>
+
+  <div id="auth-popup" class="hidden" style="
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex; justify-content: center; align-items: center;
+  z-index: 1000;
+">
+  <div style="
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    width: 300px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    position: relative;
+  ">
+    <button id="close-auth" class="close-button">&times;</button>
+
+    <h2>Вход</h2>
+    <input id="email" type="email" placeholder="Email" style="width: 100%; margin-bottom: 1rem; padding: 0.5rem;" />
+    <input id="password" type="password" placeholder="Пароль" style="width: 100%; margin-bottom: 1rem; padding: 0.5rem;" />
+    <button id="login-btn" style="width: 100%; padding: 0.5rem; background: #4A3F35; color: white; border: none; border-radius: 4px;">Войти</button>
+    <p id="auth-error" style="color: red; margin-top: 1rem; display: none;">Неверный пароль</p>
+  </div>
+</div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const carousel = document.getElementById('carousel');
+      const slideWidth = 220;
+      const visibleSlides = 4;
+
+      const originals = Array.from(carousel.children);
+      carousel.innerHTML = '';
+
+      originals.forEach(sl => carousel.appendChild(sl.cloneNode(true)));
+
+      for (let i = 0; i < visibleSlides; i++) {
+        const firstClone = originals[i].cloneNode(true);
+        const lastClone = originals[originals.length - visibleSlides + i].cloneNode(true);
+        carousel.appendChild(firstClone);
+        carousel.insertBefore(lastClone, carousel.firstChild);
+      }
+
+      let pos = visibleSlides * slideWidth;
+      carousel.scrollLeft = pos;
+
+      const next = () => {
+        pos += slideWidth;
+        carousel.scrollTo({ left: pos, behavior: 'smooth' });
+        setTimeout(() => {
+          if (pos >= (originals.length + visibleSlides) * slideWidth) {
+            pos = visibleSlides * slideWidth;
+            carousel.scrollLeft = pos;
+          }
+        }, 400);
+      };
+
+      const prev = () => {
+        pos -= slideWidth;
+        carousel.scrollTo({ left: pos, behavior: 'smooth' });
+        setTimeout(() => {
+          if (pos <= 0) {
+            pos = originals.length * slideWidth;
+            carousel.scrollLeft = pos;
+          }
+        }, 400);
+      };
+
+      document.getElementById('carousel-next').addEventListener('click', next);
+      document.getElementById('carousel-prev').addEventListener('click', prev);
+
+      const profileSec = document.getElementById('horse-profile');
+      const nameEl = document.getElementById('horse-name');
+      const imgEl = document.getElementById('horse-image');
+      const descEl = document.getElementById('horse-description');
+
+      carousel.addEventListener('click', e => {
+        const slide = e.target.closest('.slide');
+        if (!slide) return;
+
+        const name = slide.dataset.name;
+        const img = slide.dataset.img;
+
+        nameEl.textContent = name;
+        imgEl.src = img;
+        descEl.textContent = `Описание лошади по имени ${name}. Это длинный текст, который можно прокрутить при необходимости. Он не выталкивает описание клуба вниз. `.repeat(20);
+        profileSec.classList.remove('hidden');
+
+        // Прокрутку страницы отключаем, чтобы не скроллить, так как карточка адаптивна и видна полностью
+        // window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+
+      document.getElementById('book-from-profile').addEventListener('click', () => {
+        const name = nameEl.textContent;
+        if (name) localStorage.setItem('selectedHorseName', name);
+        window.location.href = 'account.html';
+      });
+
+            const authPopup = document.getElementById('auth-popup');
+      const openAuthBtn = document.querySelector('header a');
+      const closeAuthBtn = document.getElementById('close-auth');
+      const loginBtn = document.getElementById('login-btn');
+      const authError = document.getElementById('auth-error');
+
+      openAuthBtn.addEventListener('click', (e) => {
+        e.preventDefault(); // чтобы не переходить по ссылке
+        authPopup.classList.remove('hidden');
+      });
+
+      closeAuthBtn.addEventListener('click', () => {
+        authPopup.classList.add('hidden');
+        authError.style.display = 'none';
+      });
+
+      loginBtn.addEventListener('click', async () => {
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value.trim();
+
+        if (!email || !password) return;
+
+        try {
+          // Отправляем запрос на авторизацию/регистрацию
+          const response = await fetch('http://localhost:3000/auth', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            // Если успешно, сохраняем токен и переходим в личный кабинет
+            localStorage.setItem('authToken', data.token);
+            window.location.href = 'account.html';
+          } else {
+            // Если ошибка, показываем сообщение
+            authError.textContent = data.error || 'Ошибка авторизации';
+            authError.style.display = 'block';
+          }
+        } catch (err) {
+          authError.textContent = 'Ошибка сети';
+          authError.style.display = 'block';
+          console.error(err);
+        }
+      });
+
+    });
+  </script>
+</body>
+</html>
+``
