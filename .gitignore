@@ -25,3 +25,6 @@ allure-results/
 # кэш от Flatpickr, browsersync, Jest и пр.
 .cache/
 coverage/
+
+# venv
+venv/
