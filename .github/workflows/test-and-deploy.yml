@@ -66,7 +66,7 @@ jobs:
         docker run -d --name horse-booking \
           --network horse-net \
           -p 3000:3000 \
-          --health-cmd="curl -fs http://127.0.0.1:3000 || exit 1" \
+          --health-cmd="curl -f http://127.0.0.1:3000 || exit 1" \
           --health-interval=5s \
           --health-timeout=3s \
           --health-retries=5 \

@@ -20,5 +20,6 @@ RUN mkdir -p /app/data
 # Открываем порт 3000
 EXPOSE 3000
 
+RUN apk add --no-cache curl
 # Запускаем приложение
 CMD ["node", "server.js"]
