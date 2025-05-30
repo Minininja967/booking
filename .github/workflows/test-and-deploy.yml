@@ -35,28 +35,20 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-buildx-
     
-    # Параллельная сборка контейнеров
+    # Cборка контейнеров
     - name: 🔨 Build containers
       run: |
-        set -e
-        # Сборка основного приложения
-        docker build -t horse-booking-app . &
-        PID1=$!
-        
-        # Сборка тестового контейнера
+        docker build -t horse-booking-app .
         docker build -t test-runner -f Dockerfile.test \
           --cache-from=type=local,src=/tmp/.buildx-cache \
-          --cache-to=type=local,dest=/tmp/.buildx-cache-new,mode=max . &
-        PID2=$!
-        
-        # Ждем завершения обеих сборок
-        wait $PID1
-        wait $PID2
-        
-        # Обновляем кэш
+          --cache-to=type=local,dest=/tmp/.buildx-cache-new,mode=max .
         rm -rf /tmp/.buildx-cache
         mv /tmp/.buildx-cache-new /tmp/.buildx-cache || true
-    
+
+    # Проверка Сборки
+    - name: 🐳 List Docker images
+      run: docker images | grep test-runner || echo "❌ test-runner NOT built"
+
     # Запуск приложения
     - name: 🚀 Start application
       run: |
