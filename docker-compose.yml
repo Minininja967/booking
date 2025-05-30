@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # Веб-приложение horse-booking
   horse-booking-app:
     build: .
     container_name: horse-booking-container
@@ -14,3 +15,40 @@ services:
     environment:
       - NODE_ENV=production
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - app-network
+
+  # Тестовый контейнер
+  tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    container_name: horse-booking-tests
+    depends_on:
+      horse-booking-app:
+        condition: service_healthy
+    environment:
+      - BASE_URL=http://horse-booking-app:3000
+    volumes:
+      - ./allure-results:/tests/allure-results
+      - ./allure-report:/tests/allure-report
+    networks:
+      - app-network
+    profiles:
+      - testing
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  allure-results:
+    driver: local
+  allure-report:
+    driver: local

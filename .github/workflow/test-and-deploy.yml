@@ -1,0 +1,107 @@
+name: Test and Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+# Разрешения для записи в GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 🐳 Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    # Запуск веб-приложения horse-booking
+    - name: 🚀 Start Horse Booking Application
+      run: |
+        # Запуск horse-booking приложения
+        docker-compose up -d horse-booking-app
+        
+        # Ожидание запуска сайта
+        echo "⏳ Ожидание запуска horse-booking приложения..."
+        timeout 60 bash -c 'until curl -f http://localhost:3000; do sleep 2; done'
+        echo "✅ Horse-booking приложение запущено"
+    
+    # Сборка тестового контейнера
+    - name: 🔨 Build Test Container
+      run: |
+        docker build -t test-runner -f Dockerfile.test .
+    
+    # Запуск тестов
+    - name: 🧪 Run Tests
+      run: |
+        mkdir -p allure-results allure-report
+        # Запуск тестов через docker-compose
+        docker-compose --profile testing run --rm tests
+    
+    # Сохранение результатов тестов как артефактов
+    - name: 📊 Upload Allure Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: allure-results
+        path: allure-results/
+        retention-days: 30
+    
+    # Генерация и загрузка Allure отчета
+    - name: 📈 Generate Allure Report
+      if: always()
+      run: |
+        # Установка Allure
+        wget https://github.com/allure-framework/allure2/releases/download/2.34.0/allure-2.34.0.zip
+        unzip allure-2.34.0.zip
+        sudo mv allure-2.34.0 /opt/allure
+        sudo ln -s /opt/allure/bin/allure /usr/bin/allure
+        
+        # Генерация отчета
+        if [ -d "allure-results" ] && [ "$(ls -A allure-results)" ]; then
+          allure generate allure-results -o allure-report --clean
+          echo "✅ Allure отчет сгенерирован"
+        else
+          echo "⚠️ Нет результатов для генерации отчета"
+          mkdir -p allure-report
+          echo "<h1>No test results found</h1>" > allure-report/index.html
+        fi
+    
+    # Загрузка отчета для GitHub Pages
+    - name: 📤 Upload Pages Artifact
+      uses: actions/upload-pages-artifact@v3
+      if: always()
+      with:
+        path: allure-report/
+    
+    # Очистка контейнеров
+    - name: 🧹 Cleanup
+      if: always()
+      run: |
+        docker-compose down --volumes --remove-orphans
+
+  # Деплой на GitHub Pages
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: always() && github.ref == 'refs/heads/main'
+    
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    outputs:
+    page_url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+    - name: 🌐 Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4

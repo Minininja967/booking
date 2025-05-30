@@ -1,0 +1,42 @@
+# ✅ Базовый безопасный образ Python
+FROM python:3.13-slim
+
+# 📌 Обновление системы и установка зависимостей
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    unzip \
+    git \
+    nodejs \
+    npm \
+    openjdk-17-jre-headless \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# ✅ Установка Playwright для Python
+RUN pip install --no-cache-dir pytest pytest-playwright allure-pytest
+
+# 📦 Установка браузеров Playwright (headless Chromium, Firefox, WebKit)
+RUN python -m playwright install --with-deps
+
+# ✅ Установка Allure CLI (исправлена ссылка)
+RUN wget https://github.com/allure-framework/allure2/releases/download/2.34.0/allure-2.34.0.zip \
+    && unzip allure-2.34.0.zip -d /opt/ \
+    && mv /opt/allure-2.34.0 /opt/allure \
+    && ln -s /opt/allure/bin/allure /usr/bin/allure \
+    && rm allure-2.34.0.zip
+
+# ✅ Рабочая директория
+WORKDIR /tests
+
+# 🔁 Копируем проект в контейнер
+COPY . .
+
+# 🛠️ Установка node зависимостей, если есть фронт/сервер
+RUN if [ -f package.json ]; then npm install; fi
+
+# 📝 Делаем скрипт исполняемым
+RUN chmod +x run_tests.sh
+
+# 🧪 Точка входа — запуск тестов и генерация отчета
+CMD ["./run_tests.sh"]
