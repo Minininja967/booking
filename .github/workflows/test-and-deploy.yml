@@ -6,7 +6,6 @@ on:
   pull_request:
     branches: [ main, master ]
 
-# Разрешения для записи в GitHub Pages
 permissions:
   contents: read
   pages: write
@@ -15,6 +14,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     
     steps:
     - name: 📥 Checkout code
@@ -22,73 +22,92 @@ jobs:
     
     - name: 🐳 Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
+      with:
+        driver-opts: |
+          image=moby/buildkit:v0.12.0
     
-    # Запуск веб-приложения horse-booking
-    - name: 🚀 Start Horse Booking Application
+    # Используем кэширование для Docker слоев
+    - name: 🔧 Cache Docker layers
+      uses: actions/cache@v4
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
+    
+    # Параллельная сборка контейнеров
+    - name: 🔨 Build containers
       run: |
-        # Запуск horse-booking приложения
-        docker compose up -d horse-booking-app
+        # Сборка основного приложения
+        docker build -t horse-booking-app . &
         
-        # Ожидание запуска сайта
-        echo "⏳ Ожидание запуска horse-booking приложения..."
-        timeout 60 bash -c 'until curl -f http://localhost:3000; do sleep 2; done'
-        echo "✅ Horse-booking приложение запущено"
+        # Сборка тестового контейнера
+        docker build -t test-runner -f Dockerfile.test \
+          --cache-from=type=local,src=/tmp/.buildx-cache \
+          --cache-to=type=local,dest=/tmp/.buildx-cache-new,mode=max . &
+        
+        # Ждем завершения обеих сборок
+        wait
+        
+        # Обновляем кэш
+        rm -rf /tmp/.buildx-cache
+        mv /tmp/.buildx-cache-new /tmp/.buildx-cache || true
     
-    # Сборка тестового контейнера
-    - name: 🔨 Build Test Container
+    # Запуск приложения
+    - name: 🚀 Start application
       run: |
-        docker build -t test-runner -f Dockerfile.test .
+        docker run -d --name horse-booking \
+          -p 3000:3000 \
+          --health-cmd="wget -q -O- http://127.0.0.1:3000 || exit 1" \
+          --health-interval=5s \
+          --health-timeout=3s \
+          --health-retries=5 \
+          horse-booking-app
+        
+        # Ждем готовности
+        echo "⏳ Ожидание запуска приложения..."
+        timeout 60 bash -c 'until docker inspect horse-booking --format="{{.State.Health.Status}}" | grep -q healthy; do sleep 2; done'
+        echo "✅ Приложение готово"
     
     # Запуск тестов
-    - name: 🧪 Run Tests
+    - name: 🧪 Run tests
       run: |
-        mkdir -p allure-results allure-report
-        # Запуск тестов через docker compose
-        docker compose --profile testing run --rm tests
-    
-    # Сохранение результатов тестов как артефактов
-    - name: 📊 Upload Allure Results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: allure-results
-        path: allure-results/
-        retention-days: 30
-    
-    # Генерация и загрузка Allure отчета
-    - name: 📈 Generate Allure Report
-      if: always()
-      run: |
-        # Установка Allure
-        wget https://github.com/allure-framework/allure2/releases/download/2.34.0/allure-2.34.0.zip
-        unzip allure-2.34.0.zip
-        sudo mv allure-2.34.0 /opt/allure
-        sudo ln -s /opt/allure/bin/allure /usr/bin/allure
+        mkdir -p allure-results
         
-        # Генерация отчета
+        docker run --rm \
+          --network container:horse-booking \
+          -v $(pwd)/allure-results:/tests/allure-results \
+          -e BASE_URL=http://localhost:3000 \
+          test-runner
+    
+    # Генерация отчета (упрощенно)
+    - name: 📈 Generate report
+      if: always()
+      run: |
         if [ -d "allure-results" ] && [ "$(ls -A allure-results)" ]; then
-          allure generate allure-results -o allure-report --clean
-          echo "✅ Allure отчет сгенерирован"
+          # Используем Docker для генерации отчета
+          docker run --rm \
+            -v $(pwd)/allure-results:/allure-results \
+            -v $(pwd)/allure-report:/allure-report \
+            frankescobar/allure-docker-service:latest \
+            allure generate /allure-results -o /allure-report --clean
         else
-          echo "⚠️ Нет результатов для генерации отчета"
           mkdir -p allure-report
           echo "<h1>No test results found</h1>" > allure-report/index.html
         fi
     
-    # Загрузка отчета для GitHub Pages
-    - name: 📤 Upload Pages Artifact
+    - name: 📤 Upload report
       uses: actions/upload-pages-artifact@v3
       if: always()
       with:
         path: allure-report/
     
-    # Очистка контейнеров
     - name: 🧹 Cleanup
       if: always()
       run: |
-        docker compose down --volumes --remove-orphans
+        docker stop horse-booking || true
+        docker rm horse-booking || true
 
-  # Деплой на GitHub Pages
   deploy:
     needs: test
     runs-on: ubuntu-latest

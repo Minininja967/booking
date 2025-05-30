@@ -1,19 +1,22 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "=== CI: Запуск тестов с Allure ==="
+echo "=== CI: Запуск тестов ==="
 
-echo "[1/4] Очистка предыдущих результатов..."
-rm -rf allure-results allure-report
+# Ждем готовности приложения
+echo "Проверка доступности приложения..."
+timeout 60 bash -c 'until curl -f $BASE_URL/health 2>/dev/null; do echo "Waiting..."; sleep 2; done' || {
+    echo "❌ Приложение недоступно"
+    exit 1
+}
 
-echo "[2/4] Запуск тестов..."
+echo "✅ Приложение готово, запускаем тесты..."
+
+# Запуск тестов с Allure
 pytest tests/ \
-  --alluredir=allure-results \
+  --alluredir=/tests/allure-results \
   -v --tb=short \
+  --maxfail=5 \
   "$@"
 
-echo "[3/4] Генерация HTML отчета..."
-allure generate allure-results -o allure-report --clean
-
-echo "[4/4] ✅ Готово!"
-
+echo "✅ Тесты завершены"

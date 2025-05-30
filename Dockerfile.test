@@ -1,41 +1,24 @@
-# ✅ 1. Базовый образ
+# Используем более легкий базовый образ
 FROM python:3.13-slim
 
-# ✅ 2. Установка системных зависимостей (стабильный слой)
+# Установка системных зависимостей одним слоем
 RUN apt-get update && apt-get install -y \
-    curl \
-    wget \
-    unzip \
-    git \
-    nodejs \
-    npm \
-    openjdk-17-jre-headless \
- && apt-get clean && rm -rf /var/lib/apt/lists/*
+    curl wget unzip git \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# ✅ 3. Установка Python-зависимостей (сохраняется кэш pip)
-COPY requirements.txt /tmp/
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
+# Копируем и устанавливаем Python зависимости
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# ✅ 4. Установка браузеров Playwright (один раз)
-RUN python -m playwright install --with-deps
+# Устанавливаем браузеры для Playwright
+RUN python -m playwright install --with-deps chromium
 
-# ✅ 5. Установка Allure CLI (тоже кэшируется)
-RUN wget https://github.com/allure-framework/allure2/releases/download/2.34.0/allure-2.34.0.zip \
- && unzip allure-2.34.0.zip -d /opt/ \
- && mv /opt/allure-2.34.0 /opt/allure \
- && ln -s /opt/allure/bin/allure /usr/bin/allure \
- && rm allure-2.34.0.zip
-
-# ✅ 6. Установка npm-зависимостей (если есть фронтенд часть)
-COPY package.json package-lock.json* /tmp/
-RUN [ -f /tmp/package.json ] && cp -r /tmp /app && cd /app && npm install || true
-
-# ✅ 7. Копируем всё только после установки зависимостей
+# Создаем рабочую директорию
 WORKDIR /tests
-COPY . .
 
-# ✅ 8. Делаем скрипты исполняемыми
-RUN chmod +x run_tests.sh run_tests_ci.sh || true
+# Копируем тесты
+COPY tests/ ./tests/
+COPY run_tests_ci.sh ./
+RUN chmod +x run_tests_ci.sh
 
-# ✅ 9. Точка входа
 CMD ["./run_tests_ci.sh"]
