@@ -38,16 +38,20 @@ jobs:
     # Параллельная сборка контейнеров
     - name: 🔨 Build containers
       run: |
+        set -e
         # Сборка основного приложения
         docker build -t horse-booking-app . &
+        PID1=$!
         
         # Сборка тестового контейнера
         docker build -t test-runner -f Dockerfile.test \
           --cache-from=type=local,src=/tmp/.buildx-cache \
           --cache-to=type=local,dest=/tmp/.buildx-cache-new,mode=max . &
+        PID2=$!
         
         # Ждем завершения обеих сборок
-        wait
+        wait $PID1
+        wait $PID2
         
         # Обновляем кэш
         rm -rf /tmp/.buildx-cache
