@@ -1,7 +1,7 @@
-# ✅ Базовый безопасный образ Python
+# ✅ 1. Базовый образ
 FROM python:3.13-slim
 
-# 📌 Обновление системы и установка зависимостей
+# ✅ 2. Установка системных зависимостей (стабильный слой)
 RUN apt-get update && apt-get install -y \
     curl \
     wget \
@@ -10,33 +10,32 @@ RUN apt-get update && apt-get install -y \
     nodejs \
     npm \
     openjdk-17-jre-headless \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+ && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# ✅ Установка Playwright для Python
-RUN pip install --no-cache-dir pytest pytest-playwright allure-pytest
+# ✅ 3. Установка Python-зависимостей (сохраняется кэш pip)
+COPY requirements.txt /tmp/
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
-# 📦 Установка браузеров Playwright (headless Chromium, Firefox, WebKit)
+# ✅ 4. Установка браузеров Playwright (один раз)
 RUN python -m playwright install --with-deps
 
-# ✅ Установка Allure CLI (исправлена ссылка)
+# ✅ 5. Установка Allure CLI (тоже кэшируется)
 RUN wget https://github.com/allure-framework/allure2/releases/download/2.34.0/allure-2.34.0.zip \
-    && unzip allure-2.34.0.zip -d /opt/ \
-    && mv /opt/allure-2.34.0 /opt/allure \
-    && ln -s /opt/allure/bin/allure /usr/bin/allure \
-    && rm allure-2.34.0.zip
+ && unzip allure-2.34.0.zip -d /opt/ \
+ && mv /opt/allure-2.34.0 /opt/allure \
+ && ln -s /opt/allure/bin/allure /usr/bin/allure \
+ && rm allure-2.34.0.zip
 
-# ✅ Рабочая директория
+# ✅ 6. Установка npm-зависимостей (если есть фронтенд часть)
+COPY package.json package-lock.json* /tmp/
+RUN [ -f /tmp/package.json ] && cp -r /tmp /app && cd /app && npm install || true
+
+# ✅ 7. Копируем всё только после установки зависимостей
 WORKDIR /tests
-
-# 🔁 Копируем проект в контейнер
 COPY . .
 
-# 🛠️ Установка node зависимостей, если есть фронт/сервер
-RUN if [ -f package.json ]; then npm install; fi
+# ✅ 8. Делаем скрипты исполняемыми
+RUN chmod +x run_tests.sh run_tests_ci.sh || true
 
-# 📝 Делаем скрипт исполняемым
-RUN chmod +x run_tests.sh
-
-# 🧪 Точка входа — запуск тестов и генерация отчета
-CMD ["./run_tests.sh"]
+# ✅ 9. Точка входа
+CMD ["./run_tests_ci.sh"]

@@ -28,3 +28,9 @@ coverage/
 
 # venv
 venv/
+
+__pycahe__
+*.sqlite
+.env
+data
+.git

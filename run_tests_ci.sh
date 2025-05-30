@@ -1,22 +1,19 @@
 #!/bin/bash
+set -euo pipefail
 
 echo "=== CI: Запуск тестов с Allure ==="
 
-echo "1. Установка зависимостей..."
-pip install allure-pytest pytest-playwright
+echo "[1/4] Очистка предыдущих результатов..."
+rm -rf allure-results allure-report
 
-echo "2. Очистка предыдущих результатов..."
-rm -rf allure-results
-rm -rf allure-report
-
-echo "3. Запуск тестов..."
+echo "[2/4] Запуск тестов..."
 pytest tests/ \
-    --alluredir=allure-results \
-    -v \
-    --tb=short \
-    "$@"
+  --alluredir=allure-results \
+  -v --tb=short \
+  "$@"
 
-echo "4. Генерация HTML отчета..."
+echo "[3/4] Генерация HTML отчета..."
 allure generate allure-results -o allure-report --clean
 
-echo "=== Готово! ==="
+echo "[4/4] ✅ Готово!"
+
