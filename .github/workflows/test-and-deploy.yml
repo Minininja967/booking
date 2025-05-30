@@ -25,6 +25,9 @@ jobs:
       with:
         driver-opts: |
           image=moby/buildkit:v0.12.0
+
+    - name: 🧱 Create Docker network
+      run: docker network create horse-net
     
     # Используем кэширование для Docker слоев
     - name: 🔧 Cache Docker layers
@@ -61,6 +64,7 @@ jobs:
     - name: 🚀 Start application
       run: |
         docker run -d --name horse-booking \
+          --network horse-net
           -p 3000:3000 \
           --health-cmd="wget -q -O- http://127.0.0.1:3000 || exit 1" \
           --health-interval=5s \
@@ -79,9 +83,9 @@ jobs:
         mkdir -p allure-results
         
         docker run --rm \
-          --network container:horse-booking \
+          --network horse-net \
           -v $(pwd)/allure-results:/tests/allure-results \
-          -e BASE_URL=http://localhost:3000 \
+          -e BASE_URL=http://horse-booking:3000 \
           test-runner
     
     # Генерация отчета (упрощенно)
