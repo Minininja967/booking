@@ -64,7 +64,7 @@ jobs:
     - name: 🚀 Start application
       run: |
         docker run -d --name horse-booking \
-          --network horse-net
+          --network horse-net \
           -p 3000:3000 \
           --health-cmd="wget -q -O- http://127.0.0.1:3000 || exit 1" \
           --health-interval=5s \
