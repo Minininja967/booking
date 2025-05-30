@@ -27,7 +27,7 @@ jobs:
     - name: 🚀 Start Horse Booking Application
       run: |
         # Запуск horse-booking приложения
-        docker-compose up -d horse-booking-app
+        docker compose up -d horse-booking-app
         
         # Ожидание запуска сайта
         echo "⏳ Ожидание запуска horse-booking приложения..."
@@ -43,8 +43,8 @@ jobs:
     - name: 🧪 Run Tests
       run: |
         mkdir -p allure-results allure-report
-        # Запуск тестов через docker-compose
-        docker-compose --profile testing run --rm tests
+        # Запуск тестов через docker compose
+        docker compose --profile testing run --rm tests
     
     # Сохранение результатов тестов как артефактов
     - name: 📊 Upload Allure Results
@@ -86,7 +86,7 @@ jobs:
     - name: 🧹 Cleanup
       if: always()
       run: |
-        docker-compose down --volumes --remove-orphans
+        docker compose down --volumes --remove-orphans
 
   # Деплой на GitHub Pages
   deploy:
