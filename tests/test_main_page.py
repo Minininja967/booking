@@ -13,8 +13,8 @@ class TestMainPage:
         "The test checks that main page load correct with correct title and visible load button"
     )
     @allure.severity(allure.severity_level.CRITICAL)
-    def test_main_page_loads_correctly_test(self, page):
-        main_page = MainPage(page)
+    def test_main_page_loads_correctly_test(self, page, base_url):
+        main_page = MainPage(page, base_url)
 
         with allure.step("Open main page"):
             main_page.open()
@@ -29,8 +29,8 @@ class TestMainPage:
     @allure.title("Open horse profile by clicking on photo")
     @allure.description("The test checks that horse profile can be opened")
     @allure.severity(allure.severity_level.CRITICAL)
-    def test_horse_profile_opens_on_card_click(self, page):
-        main_page = MainPage(page)
+    def test_horse_profile_opens_on_card_click(self, page, base_url):
+        main_page = MainPage(page, base_url)
 
         with allure.step("Open main page"):
             main_page.open()
@@ -53,8 +53,8 @@ class TestMainPage:
         "Verifying that names in the slider matches the name in the profile"
     )
     @allure.severity(allure.severity_level.NORMAL)
-    def test_horse_names_match_profile_names(self, page):
-        main_page = MainPage(page)
+    def test_horse_names_match_profile_names(self, page, base_url):
+        main_page = MainPage(page, base_url)
 
         with allure.step("Open main page"):
             main_page.open()
@@ -81,8 +81,8 @@ class TestMainPage:
         "Verifying that login popup appears after clicking login button"
     )
     @allure.severity(allure.severity_level.CRITICAL)
-    def test_popup_opening_by_clicking_login_button(self, page):
-        main_page = MainPage(page)
+    def test_popup_opening_by_clicking_login_button(self, page, base_url):
+        main_page = MainPage(page, base_url)
 
         with allure.step("Open main page"):
             main_page.open()
@@ -99,8 +99,8 @@ class TestMainPage:
         "Verifying that login popup appears after clicking booking button"
     )
     @allure.severity(allure.severity_level.CRITICAL)
-    def test_popup_openenig_by_clicking_booking_button(self, page):
-        main_page = MainPage(page)
+    def test_popup_openenig_by_clicking_booking_button(self, page, base_url):
+        main_page = MainPage(page, base_url)
 
         with allure.step("Open main page"):
             main_page.open()
@@ -124,8 +124,8 @@ class TestMainPage:
     )
     @allure.severity(allure.severity_level.NORMAL)
     @pytest.mark.parametrize("card_index", [0, 1, 2])
-    def test_specific_horse_cards(self, page, card_index):
-        main_page = MainPage(page)
+    def test_specific_horse_cards(self, page, card_index, base_url):
+        main_page = MainPage(page, base_url)
 
         with allure.step("Open main page"):
             main_page.open()
