@@ -159,8 +159,8 @@ app.delete('/cancel-booking/:id', authenticateToken, (req, res) => {
   });
 });
 
-app.listen(port, '0.0.0.0', () => {
-  console.log(`🚀 Server running at http://localhost:${port}`);
+app.listen(3000, '0.0.0.0', () => {
+  console.log(`🚀 Server running at http://0.0.0.0:3000`);
 });
 
 // Graceful shutdown
