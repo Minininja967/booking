@@ -127,6 +127,7 @@ jobs:
     - name: 🧪 Run tests
       run: |
         mkdir -p allure-results
+        chmod -R 777 allure-report allure-results
         
         docker run --rm \
           --network horse-net \
