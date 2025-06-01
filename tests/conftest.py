@@ -18,4 +18,4 @@ def page():
 
 @pytest.fixture(scope="session")
 def base_url():
-    return os.getenv("BASE_URL", "http://horse-booking:3000")
+    return os.getenv("BASE_URL", "http://localhost:3000")
