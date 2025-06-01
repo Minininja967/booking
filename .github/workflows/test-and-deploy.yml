@@ -127,7 +127,7 @@ jobs:
     - name: 🧪 Run tests
       run: |
         mkdir -p allure-results
-        chmod -R 777 allure-report allure-results
+        chmod -R 777 allure-results
         
         docker run --rm \
           --network horse-net \
@@ -139,6 +139,9 @@ jobs:
     - name: 📈 Generate report
       if: always()
       run: |
+        mkdir -p allure-report
+        chmod -R 777 allure-report
+        
         if [ -d "allure-results" ] && [ "$(ls -A allure-results)" ]; then
           # Используем Docker для генерации отчета
           docker run --rm \
