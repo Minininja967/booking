@@ -5,9 +5,9 @@ import time
 
 
 class MainPage:
-    def __init__(self, page: Page):
+    def __init__(self, page: Page, base_url: str):
         self.page = page
-        self.url = "http://localhost:3000"
+        self.url = base_url
 
         # Локаторы выносим в константы
         self.HORSE_CARDS = ".slide"

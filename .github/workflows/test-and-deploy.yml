@@ -105,7 +105,7 @@ jobs:
         
         # Ждем готовности
         echo "⏳ Ожидание запуска приложения..."
-        timeout 60 bash -c 'until docker inspect horse-booking --format="{{.State.Health.Status}}" | grep -q healthy; do sleep 2; done'
+        timeout -s TERM 60 bash -c 'until docker inspect horse-booking --format="{{.State.Health.Status}}" | grep -q healthy; do sleep 2; done'
         echo "✅ Приложение готово"
     
     # Отладочная информация
