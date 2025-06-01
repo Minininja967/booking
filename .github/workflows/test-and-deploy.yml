@@ -76,6 +76,21 @@ jobs:
         echo "⏳ Ожидание запуска приложения..."
         timeout 60 bash -c 'until docker inspect horse-booking --format="{{.State.Health.Status}}" | grep -q healthy; do sleep 2; done'
         echo "✅ Приложение готово"
+
+    # Отладочная информация
+    - name: 🔍 Debug network connectivity
+      run: |
+        echo "=== Информация о контейнере ==="
+        docker ps -a | grep horse-booking
+        docker logs horse-booking | tail -10
+        
+        echo "=== Проверка сети ==="
+        docker network inspect horse-net
+        
+        echo "=== Тест подключения из временного контейнера ==="
+        docker run --rm --network horse-net \
+          alpine/curl:latest \
+          curl -v -m 5 http://horse-booking:3000 || echo "❌ Не удалось подключиться"
     
     # Запуск тестов
     - name: 🧪 Run tests
