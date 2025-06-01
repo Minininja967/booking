@@ -1,31 +1,33 @@
-# Используем официальный образ Node.js
 FROM node:22-slim
 
-# Устанавливаем curl для health-check
+# Установка зависимостей для health-check
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
-# Создаем пользователя для безопасности
+# Создание безопасного пользователя
 RUN groupadd -r nodeuser && useradd -r -g nodeuser nodeuser
 
-# Устанавливаем рабочую директорию в контейнере
+# Установка переменной окружения для продакшена
+ENV NODE_ENV=production
+
+# Рабочая директория
 WORKDIR /app
 
-# Копируем package.json и package-lock.json (если есть)
+# Копируем зависимости
 COPY package*.json ./
 
 # Устанавливаем зависимости
 RUN npm ci --only=production
 
-# Копируем остальные файлы проекта
+# Копируем остальной код
 COPY . .
 
-# Создаем директорию для базы данных и меняем владельца
+# Создаем директорию для данных и устанавливаем права
 RUN mkdir -p /app/data && chown -R nodeuser:nodeuser /app
 
-# Переключаемся на пользователя nodeuser
+# Переключаемся на безопасного пользователя
 USER nodeuser
 
-# Открываем порт 3000
+# Открываем порт
 EXPOSE 3000
 
 # Запускаем приложение
