@@ -29,6 +29,30 @@ jobs:
     - name: 🧱 Create Docker network
       run: docker network create horse-net
     
+    # Проверка наличия необходимых файлов
+    - name: 🔍 Check required files
+      run: |
+        echo "=== Проверка файлов ==="
+        ls -la
+        echo ""
+        echo "=== Dockerfile ==="
+        if [ -f "Dockerfile" ]; then
+          echo "✅ Dockerfile найден"
+          head -5 Dockerfile
+        else
+          echo "❌ Dockerfile не найден"
+          exit 1
+        fi
+        echo ""
+        echo "=== Dockerfile.test ==="
+        if [ -f "Dockerfile.test" ]; then
+          echo "✅ Dockerfile.test найден"
+          head -5 Dockerfile.test
+        else
+          echo "❌ Dockerfile.test не найден"
+          exit 1
+        fi
+    
     # Используем кэширование для Docker слоев
     - name: 🔧 Cache Docker layers
       uses: actions/cache@v4
@@ -41,24 +65,31 @@ jobs:
     # Cборка контейнеров
     - name: 🔨 Build containers
       run: |
+        echo "=== Сборка основного приложения ==="
         docker buildx build --platform linux/amd64 \
             -t horse-booking-app . \
-            --load &
-
-          docker buildx build --platform linux/amd64 \
+            --load
+        
+        echo "=== Сборка тестового контейнера ==="
+        docker buildx build --platform linux/amd64 \
             -t test-runner -f Dockerfile.test \
             --cache-from=type=local,src=/tmp/.buildx-cache \
             --cache-to=type=local,dest=/tmp/.buildx-cache-new,mode=max \
-            --load . &
+            --load .
+        
+        # Перемещаем кэш
+        rm -rf /tmp/.buildx-cache
+        mv /tmp/.buildx-cache-new /tmp/.buildx-cache || true
 
-          wait
-          
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache || true
-
-    # Проверка Сборки
+    # Проверка сборки
     - name: 🐳 List Docker images
-      run: docker images | grep test-runner || echo "❌ test-runner NOT built"
+      run: |
+        echo "=== Список всех образов ==="
+        docker images
+        echo ""
+        echo "=== Проверка конкретных образов ==="
+        docker images | grep horse-booking-app || echo "❌ horse-booking-app NOT built"
+        docker images | grep test-runner || echo "❌ test-runner NOT built"
 
     # Запуск приложения
     - name: 🚀 Start application
@@ -76,7 +107,7 @@ jobs:
         echo "⏳ Ожидание запуска приложения..."
         timeout 60 bash -c 'until docker inspect horse-booking --format="{{.State.Health.Status}}" | grep -q healthy; do sleep 2; done'
         echo "✅ Приложение готово"
-
+    
     # Отладочная информация
     - name: 🔍 Debug network connectivity
       run: |
