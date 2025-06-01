@@ -163,6 +163,10 @@ app.listen(3000, '0.0.0.0', () => {
   console.log(`🚀 Server running at http://0.0.0.0:3000`);
 });
 
+app.get('/health', (req, res) => {
+  res.status(200).send('Healthy')
+})
+
 // Graceful shutdown
 process.on('SIGINT', () => {
   console.log('Shutting down gracefully...');
