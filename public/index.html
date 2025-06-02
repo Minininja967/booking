@@ -227,7 +227,7 @@
 <body>
   <header>
     <h1>Конный Клуб "Гармония"</h1>
-    <a href="account.html"><button>Личный кабинет</button></a>
+    <button id="account-btn">Личный кабинет</button>
   </header>
 
   <main>
@@ -376,38 +376,71 @@
         imgEl.src = img;
         descEl.textContent = `Описание лошади по имени ${name}. Это длинный текст, который можно прокрутить при необходимости. Он не выталкивает описание клуба вниз. `.repeat(20);
         profileSec.classList.remove('hidden');
-
-        // Прокрутку страницы отключаем, чтобы не скроллить, так как карточка адаптивна и видна полностью
-        // window.scrollTo({ top: 0, behavior: 'smooth' });
       });
 
+      // Функция для проверки авторизации
+      const isAuthenticated = () => {
+        const token = localStorage.getItem('authToken');
+        // Здесь можно добавить проверку валидности токена
+        return token && token !== '';
+      };
+
+      // Функция для показа попапа авторизации
+      const showAuthPopup = () => {
+        authPopup.classList.remove('hidden');
+      };
+
+      // Обработчик кнопки "Забронировать" в карточке лошади
       document.getElementById('book-from-profile').addEventListener('click', () => {
-        const name = nameEl.textContent;
-        if (name) localStorage.setItem('selectedHorseName', name);
-        window.location.href = 'account.html';
+        if (isAuthenticated()) {
+          // Если пользователь авторизован, сохраняем имя лошади и переходим в кабинет
+          const name = nameEl.textContent;
+          if (name) localStorage.setItem('selectedHorseName', name);
+          window.location.href = 'account.html';
+        } else {
+          // Если не авторизован, показываем попап авторизации
+          const name = nameEl.textContent;
+          if (name) localStorage.setItem('selectedHorseName', name);
+          showAuthPopup();
+        }
       });
 
-            const authPopup = document.getElementById('auth-popup');
-      const openAuthBtn = document.querySelector('header a');
+      // Обработчик кнопки "Личный кабинет" в шапке
+      document.getElementById('account-btn').addEventListener('click', () => {
+        if (isAuthenticated()) {
+          window.location.href = 'account.html';
+        } else {
+          showAuthPopup();
+        }
+      });
+
+      const authPopup = document.getElementById('auth-popup');
       const closeAuthBtn = document.getElementById('close-auth');
       const loginBtn = document.getElementById('login-btn');
       const authError = document.getElementById('auth-error');
-
-      openAuthBtn.addEventListener('click', (e) => {
-        e.preventDefault(); // чтобы не переходить по ссылке
-        authPopup.classList.remove('hidden');
-      });
 
       closeAuthBtn.addEventListener('click', () => {
         authPopup.classList.add('hidden');
         authError.style.display = 'none';
       });
 
+      // Закрытие попапа при клике вне его
+      authPopup.addEventListener('click', (e) => {
+        if (e.target === authPopup) {
+          authPopup.classList.add('hidden');
+          authError.style.display = 'none';
+        }
+      });
+
       loginBtn.addEventListener('click', async () => {
         const email = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value.trim();
 
-        if (!email || !password) return;
+        if (!email || !password) {
+          authError.textContent = 'Введите email и пароль';
+          authError.style.display = 'block';
+          return;
+        }
 
         try {
           // Отправляем запрос на авторизацию/регистрацию
@@ -435,8 +468,19 @@
         }
       });
 
+      // Обработка нажатия Enter в полях формы авторизации
+      document.getElementById('email').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          document.getElementById('password').focus();
+        }
+      });
+
+      document.getElementById('password').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          loginBtn.click();
+        }
+      });
     });
   </script>
 </body>
 </html>
-``
